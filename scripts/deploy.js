@@ -5,7 +5,7 @@ const hre = require('hardhat')
 const CONTRACT_NAME = 'SimpleToken'
 const TOKEN_NAME = 'Test2A'
 const TOKEN_SYMBOL = 'T2A'
-const ADMIN_ADDRESS = '0xFa2a4b0358B132B261E796fa07D941842f3871D6'
+const ADMIN_ADDRESS = ''
 
 /** Main deploy function **/
 async function main() {
