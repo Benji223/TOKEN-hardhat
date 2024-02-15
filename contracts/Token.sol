@@ -1,74 +1,53 @@
- 
 // SPDX-License-Identifier: MIT
  
-
 /**  
 @author Benji223
-
 */
-
  
 pragma solidity ^0.8.20;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-contract Token is ERC20 {
-    using Math for uint256;
+contract SimpleToken is ERC20 {
     
     string _name;       
     string _symbol;
 
     address[] public adminList;
-    address public owner;
+
+    address private owner;
+    address private admin1;
+
     mapping ( address => bool) public teamMember;
-
-
-    uint256 constant _totalSupply = 1000000000000000000000000;
-    
-
-    mapping(address => uint256) private _balances;
+    mapping(address => uint256) public _balances;    
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    address private admin0;
-    address private feeManager;
-    address private member;
+    uint256 constant _totalSupply = 1000000000000000000000000;
 
-    uint256 public buyFee;
-    uint256 public sellFee = 100;
-    bool public fees = true;
-
-    event FeesUpdated(uint256 newBuyFee, uint256 newSellFee);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     
-    error NotOwner();
-    error NotAuthorized();
-
-    constructor(string memory name_, string memory symbol_, address admin0_) ERC20(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_, address admin1_) ERC20(name_, symbol_) {
         _name = name_;
         _symbol = symbol_;
+
+        uint256 supplyOfAdmin1 = 100000000000000000000000;
 
         // set owner abilities 
         owner = msg.sender;
         teamMember[owner] = true;
         adminList.push(owner);
+        _mint(msg.sender, _totalSupply);
   
         // set admin
-        admin0 = admin0_;
-        teamMember[admin0] = true;
-        adminList.push(admin0);
+        admin1 = admin1_;
+        teamMember[admin1] = true;
+        adminList.push(admin1);
+        _mint(admin1, supplyOfAdmin1 );
 
-
-        // set initial supply to total supply and assign it to the creators of the contract
-        feeManager = msg.sender;
-        _mint(msg.sender, _totalSupply);
-        _balances[admin0] = _totalSupply - 900000000000000000000000;
     }
 
     modifier onlyOwner()   {
-        if (msg.sender != owner) {
-            revert NotOwner();
-        }
+        require(msg.sender == owner, "This address is not the Owner");
         _;
     }
 
@@ -106,7 +85,6 @@ contract Token is ERC20 {
         _mint(msg.sender, amount);
     }
  
-
     function burn(uint256 amount) public {
         _burn(_msgSender(), amount);
     }
@@ -116,38 +94,7 @@ contract Token is ERC20 {
         owner = address(0);
     }
 
-    function buy() public payable {
-        require(msg.value > 0, "ETH amount must be greater than 0");
-        uint256 amountTobuy = msg.value;
-        if (buyFee > 0) {
-            uint256 fee = amountTobuy.mul(buyFee).div(100);
-            uint256 amountAfterFee = amountTobuy.sub(fee);
-            _balances[feeManager] = _balances[feeManager].add(amountAfterFee);
-            emit Transfer(address(this), feeManager, amountAfterFee);
-            if (fee > 0) {
-                _balances[address(this)] = _balances[address(this)].add(fee);
-                emit Transfer(address(this), address(this), fee);
-            }
-        } else {
-            _balances[feeManager] = _balances[feeManager].add(amountTobuy);
-            emit Transfer(address(this), feeManager, amountTobuy);
-        }
-    }
-
-    function sell(uint256 amount) public {
-        require(_balances[msg.sender] >= amount, "Insufficient balance");
-        uint256 fee = amount.mul(sellFee).div(100);
-        uint256 amountAfterFee = amount.sub(fee);
-        _balances[msg.sender] = _balances[msg.sender].sub(amount);
-        _balances[address(this)] = _balances[address(this)].add(amountAfterFee);
-        emit Transfer(msg.sender, address(this), amountAfterFee);
-        if (fee > 0) {
-            _balances[address(this)] = _balances[address(this)].add(fee);
-            emit Transfer(msg.sender, address(this), fee);
-        }
-    }
-
-///////////SETTER FUNCTION ///////////
+    ///////////SETTER FUNCTION ///////////
  
     function setAdmin(address newAdmin) public onlyOwner {
         require(adminList.length < 10, "too many admins");
@@ -177,26 +124,10 @@ contract Token is ERC20 {
         
     }
 
-
-    function setting() public onlyOwner returns(bool){
-        buyFee = 0;
-        if(sellFee == 0){
-            sellFee = 100;
-            emit FeesUpdated(buyFee, sellFee);
-            fees = true;
-        }else if (sellFee == 100){
-            sellFee = 0;
-            emit FeesUpdated(buyFee, sellFee);
-            fees = false;
-        }
-        return fees;
-
-    }
-
     ///////////GETTER FUNCTION ///////////
 
     function getBalance(address _address) external view returns(uint256){
-        return _balances[_address];
+        return balanceOf(_address);
     }
 
     function getOwner() external view returns(address){
